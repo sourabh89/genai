@@ -14,7 +14,7 @@ From the project directory, create a virtual environment and install dependencie
 
 ```zsh
 python3 -m venv .venv
-.venv/bin/python -m pip install llama-index llama-index-llms-openai llama-index-embeddings-openai llama-index-readers-web ddgs
+.venv/bin/python -m pip install llama-index llama-index-llms-openai llama-index-embeddings-openai llama-index-readers-web ddgs langgraph
 ```
 
 Set `OPENAI_API_KEY` in your shell environment. If you already store it in `~/.zshrc`, load it into the current terminal with:
@@ -51,6 +51,38 @@ Force a fresh web search and answer instead of using the answer cache:
 .venv/bin/python demo.py --mode graph --refresh
 ```
 
+## LangGraph Demo
+
+`langgraph_demo.py` is a separate example that uses LangGraph to orchestrate web retrieval, vector search, and answer generation. It has its own persistent vector index and does not use the answer cache from `demo.py`.
+
+Start an interactive session:
+
+```zsh
+.venv/bin/python langgraph_demo.py
+```
+
+Or ask one question and exit:
+
+```zsh
+.venv/bin/python langgraph_demo.py --question "What is retrieval-augmented generation?"
+```
+
+Enter `quit` or `exit` to leave interactive mode.
+
+## LlamaIndex vs LangGraph
+
+These tools solve different parts of a RAG application and can be used together.
+
+| | LlamaIndex | LangGraph |
+| --- | --- | --- |
+| Main role | Load, index, and retrieve data for LLM applications | Orchestrate multi-step, stateful LLM workflows |
+| What its graph means | A knowledge/property graph represents entities and their relationships | A workflow graph connects steps (nodes) and transitions (edges) |
+| Retrieval and storage | Provides vector and property-graph indexes and data connectors | Does not provide the vector index used by this demo |
+| Best fit | Grounding answers in documents and structured knowledge | Controlling branching, loops, tools, and state across workflow steps |
+| This project's example | `demo.py --mode graph` builds a LlamaIndex `PropertyGraphIndex` | `langgraph_demo.py` runs retrieve then generate-answer nodes; retrieval uses LlamaIndex `VectorStoreIndex` |
+
+In short, LlamaIndex answers **“How do I load and retrieve relevant knowledge?”** LangGraph answers **“What steps should my application run, and in what order?”** The LangGraph demo combines them: LangGraph controls the workflow, while LlamaIndex stores and retrieves web-page vectors.
+
 ## How It Works
 
 1. The program checks for an exact cached question and mode.
@@ -66,6 +98,7 @@ Generated local data is kept in `.rag_cache/` and excluded from Git:
 
 - `answers.sqlite3` stores answers, source URLs, and question embeddings.
 - `vector_store/` stores the persistent LlamaIndex vector index used in vector mode.
+- `langgraph_vector_store/` stores the persistent vector index for `langgraph_demo.py`.
 - Graph mode builds a property graph from the current question's fetched pages; that graph is not persisted between runs.
 
 The cache is separated by mode, so a vector-mode answer is not reused in graph mode. Older saved answers without question embeddings can be backfilled during semantic lookup.
